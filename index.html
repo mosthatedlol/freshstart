@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FreshStart — Windows Setup Utility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0c11;
+    --surface:   #111318;
+    --surface2:  #181b25;
+    --border:    #1e2235;
+    --accent:    #4f8ef7;
+    --accent2:   #3ecf8e;
+    --warn:      #f5a623;
+    --text:      #dde3f5;
+    --dim:       #5a6180;
+    --muted:     #272b3d;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-head);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ── Custom cursor ── */
+  #cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .15s, height .15s, background .15s;
+    mix-blend-mode: screen;
+  }
+  #cursor.big {
+    width: 36px; height: 36px;
+    background: rgba(79,142,247,.25);
+  }
+
+  /* ── Noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: .5;
+  }
+
+  /* ── Grid bg ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--muted) 1px, transparent 1px),
+      linear-gradient(90deg, var(--muted) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: .35;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 80%);
+  }
+
+  /* ── Nav ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: rgba(10,12,17,.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-size: 1.1rem; font-weight: 800; letter-spacing: -.02em;
+    color: var(--text);
+  }
+  .nav-logo span { color: var(--accent); }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    font-size: .85rem; font-weight: 600; letter-spacing: .06em;
+    color: var(--dim); text-decoration: none; text-transform: uppercase;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 120px 24px 80px;
+    text-align: center;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 6px 16px;
+    font-family: var(--font-mono);
+    font-size: .75rem; color: var(--accent2);
+    margin-bottom: 36px;
+    opacity: 0; animation: fadeup .6s .1s forwards;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent2);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .3; }
+  }
+
+  .hero h1 {
+    font-size: clamp(3.5rem, 9vw, 7.5rem);
+    font-weight: 800;
+    line-height: .95;
+    letter-spacing: -.04em;
+    opacity: 0; animation: fadeup .7s .2s forwards;
+  }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    margin-top: 28px;
+    max-width: 540px;
+    font-size: 1.1rem; font-weight: 400;
+    color: var(--dim); line-height: 1.7;
+    opacity: 0; animation: fadeup .7s .35s forwards;
+  }
+
+  .hero-actions {
+    margin-top: 44px;
+    display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+    opacity: 0; animation: fadeup .7s .5s forwards;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: .95rem; font-weight: 700;
+    padding: 14px 30px;
+    border: none; border-radius: 6px;
+    text-decoration: none; cursor: none;
+    position: relative; overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+    box-shadow: 0 0 0 0 rgba(79,142,247,0);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(79,142,247,.35);
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+  }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: transparent;
+    color: var(--dim);
+    font-family: var(--font-head);
+    font-size: .95rem; font-weight: 600;
+    padding: 14px 28px;
+    border: 1px solid var(--border); border-radius: 6px;
+    text-decoration: none; cursor: none;
+    transition: color .2s, border-color .2s, transform .2s;
+  }
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--dim);
+    transform: translateY(-2px);
+  }
+
+  .hero-meta {
+    margin-top: 24px;
+    font-family: var(--font-mono);
+    font-size: .75rem; color: var(--muted);
+    letter-spacing: .04em;
+    opacity: 0; animation: fadeup .7s .65s forwards;
+  }
+  .hero-meta span { color: var(--dim); }
+
+  /* ── Scroll indicator ── */
+  .scroll-hint {
+    position: absolute; bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    opacity: 0; animation: fadeup .7s .9s forwards;
+  }
+  .scroll-hint span {
+    font-family: var(--font-mono); font-size: .7rem;
+    color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+  }
+  .scroll-line {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--dim), transparent);
+    animation: scrollpulse 1.8s infinite;
+  }
+  @keyframes scrollpulse {
+    0%   { transform: scaleY(0); transform-origin: top; }
+    50%  { transform: scaleY(1); transform-origin: top; }
+    51%  { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  /* ── Section base ── */
+  section {
+    position: relative; z-index: 1;
+    padding: 100px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: .72rem; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800; letter-spacing: -.03em;
+    line-height: 1.05;
+    margin-bottom: 16px;
+  }
+  .section-sub {
+    color: var(--dim); font-size: 1rem; line-height: 1.7;
+    max-width: 520px;
+  }
+
+  /* ── Features ── */
+  .features-grid {
+    margin-top: 60px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .feature-card {
+    background: var(--surface);
+    padding: 36px 32px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    transition: background .2s;
+  }
+  .feature-card:hover { background: var(--surface2); }
+  .feature-icon {
+    font-size: 1.6rem; margin-bottom: 18px;
+    display: block;
+  }
+  .feature-card h3 {
+    font-size: 1rem; font-weight: 700;
+    letter-spacing: -.01em;
+    margin-bottom: 10px;
+  }
+  .feature-card p {
+    font-size: .875rem; color: var(--dim);
+    line-height: 1.65; font-family: var(--font-mono); font-weight: 300;
+  }
+
+  /* ── Apps list ── */
+  .apps-section { padding-top: 0; }
+  .apps-grid {
+    margin-top: 50px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .app-pill {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    transition: border-color .2s, background .2s, transform .2s;
+  }
+  .app-pill:hover {
+    border-color: var(--accent);
+    background: var(--surface2);
+    transform: translateY(-2px);
+  }
+  .app-pill-icon { font-size: 1.3rem; }
+  .app-pill-info {}
+  .app-pill-name {
+    font-size: .9rem; font-weight: 700;
+    letter-spacing: -.01em;
+  }
+  .app-pill-cat {
+    font-size: .72rem; color: var(--dim);
+    font-family: var(--font-mono);
+    margin-top: 2px;
+  }
+
+  /* ── How it works ── */
+  .steps {
+    margin-top: 60px;
+    display: flex; flex-direction: column; gap: 0;
+    border-left: 1px solid var(--border);
+    margin-left: 20px;
+    padding-left: 40px;
+  }
+  .step {
+    position: relative;
+    padding-bottom: 44px;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: -46px; top: 6px;
+    width: 12px; height: 12px;
+    background: var(--bg);
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+  }
+  .step-num {
+    font-family: var(--font-mono); font-size: .72rem;
+    color: var(--accent); letter-spacing: .1em;
+    margin-bottom: 8px;
+  }
+  .step h3 {
+    font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 8px; letter-spacing: -.02em;
+  }
+  .step p {
+    font-size: .88rem; color: var(--dim);
+    line-height: 1.65; font-family: var(--font-mono); font-weight: 300;
+    max-width: 500px;
+  }
+
+  /* ── Requirements ── */
+  .req-grid {
+    margin-top: 50px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .req-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 22px;
+  }
+  .req-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-top: 6px; flex-shrink: 0;
+  }
+  .req-dot.green  { background: var(--accent2); }
+  .req-dot.blue   { background: var(--accent); }
+  .req-dot.yellow { background: var(--warn); }
+  .req-item h4 { font-size: .9rem; font-weight: 700; margin-bottom: 4px; }
+  .req-item p  { font-size: .8rem; color: var(--dim); font-family: var(--font-mono); font-weight: 300; line-height: 1.5; }
+
+  /* ── CTA ── */
+  .cta-band {
+    position: relative; z-index: 1;
+    margin: 0 24px 100px;
+    max-width: 1052px;
+    margin-left: auto; margin-right: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 64px;
+    text-align: center;
+    overflow: hidden;
+  }
+  .cta-band::before {
+    content: '';
+    position: absolute; top: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(79,142,247,.12), transparent 70%);
+    pointer-events: none;
+  }
+  .cta-band h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800; letter-spacing: -.03em;
+    margin-bottom: 14px;
+  }
+  .cta-band p {
+    color: var(--dim); font-size: 1rem;
+    font-family: var(--font-mono); font-weight: 300;
+    margin-bottom: 36px; line-height: 1.7;
+  }
+  .cta-note {
+    margin-top: 20px;
+    font-family: var(--font-mono); font-size: .72rem;
+    color: var(--muted); letter-spacing: .04em;
+  }
+
+  /* ── Footer ── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 32px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  footer .logo { font-size: .95rem; font-weight: 800; color: var(--dim); }
+  footer .logo span { color: var(--accent); }
+  footer p {
+    font-family: var(--font-mono); font-size: .72rem;
+    color: var(--muted); letter-spacing: .04em;
+  }
+  footer a { color: var(--dim); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  /* ── Divider ── */
+  .full-divider {
+    position: relative; z-index: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeup {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity .65s ease, transform .65s ease;
+  }
+  .reveal.visible {
+    opacity: 1; transform: translateY(0);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    nav { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .cta-band { padding: 40px 24px; }
+    footer { flex-direction: column; gap: 10px; text-align: center; }
+    .req-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">Fresh<span>Start</span></div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#apps">Apps</a>
+    <a href="#howto">How it works</a>
+    <a href="#download">Download</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">v1.0 — Windows 10 / 11</div>
+
+  <h1>
+    Your fresh install,<br>
+    <span class="line2">done in minutes.</span>
+  </h1>
+
+  <p class="hero-sub">
+    FreshStart downloads and installs everything you need after a factory reset —
+    one click, no terminal, no winget, no hunting for installers.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/YOUR_USERNAME/freshstart/releases/latest/download/setup_installer.py"
+       class="btn-primary" id="download">
+      ↓ &nbsp;Download FreshStart
+    </a>
+    <a href="https://github.com/YOUR_USERNAME/freshstart" class="btn-ghost" target="_blank">
+      ⌥ &nbsp;View on GitHub
+    </a>
+  </div>
+
+  <p class="hero-meta">Requires <span>Python 3.8+</span> · Windows 10 or 11 · Run as Administrator</p>
+
+  <div class="scroll-hint">
+    <span>scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<div class="full-divider"></div>
+
+<!-- Features -->
+<section id="features">
+  <p class="section-label reveal">What it does</p>
+  <h2 class="section-title reveal">Everything a fresh install needs.</h2>
+  <p class="section-sub reveal">No commands. No package managers. Just check what you want and hit go.</p>
+
+  <div class="features-grid reveal">
+    <div class="feature-card">
+      <span class="feature-icon">⬇️</span>
+      <h3>Direct Downloads</h3>
+      <p>Pulls the latest installer directly from each vendor's official CDN. No mirrors, no third parties.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🔍</span>
+      <h3>Checks What's Installed</h3>
+      <p>Reads the Windows registry on launch. Already installed apps are detected and unchecked automatically.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">▶️</span>
+      <h3>Sequential Install</h3>
+      <p>Opens each installer one at a time, in order. Waits for you to close it before moving to the next.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⏹️</span>
+      <h3>Cancel Anytime</h3>
+      <p>Mid-download, mid-install — the Cancel button stops the operation at any point without leaving a mess.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📁</span>
+      <h3>Keeps Your Installers</h3>
+      <p>All EXEs are saved to an <code style="font-family:var(--font-mono);color:var(--accent)">installers/</code> folder. Delete them after or keep them for reinstalls.</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">⚙️</span>
+      <h3>Settings Restore Tips</h3>
+      <p>Built-in guide for restoring OBS scenes, Logitech G HUB profiles, Razer Synapse, and more.</p>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- Apps -->
+<section id="apps" class="apps-section">
+  <p class="section-label reveal">Included apps</p>
+  <h2 class="section-title reveal">8 apps. Zero browser tabs.</h2>
+  <p class="section-sub reveal">Every app is pulled from its official source URL. Pick what you need, skip what you don't.</p>
+
+  <div class="apps-grid reveal">
+    <div class="app-pill">
+      <span class="app-pill-icon">🌐</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Brave Browser</div>
+        <div class="app-pill-cat">Browsers</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">💬</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Discord</div>
+        <div class="app-pill-cat">Communication</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">🎮</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Steam</div>
+        <div class="app-pill-cat">Gaming</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">🎥</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">OBS Studio</div>
+        <div class="app-pill-cat">Streaming</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">🖱️</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Logitech G HUB</div>
+        <div class="app-pill-cat">Peripherals</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">🐍</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Razer Synapse</div>
+        <div class="app-pill-cat">Peripherals</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">🖥️</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Splashtop Personal</div>
+        <div class="app-pill-cat">Remote Access</div>
+      </div>
+    </div>
+    <div class="app-pill">
+      <span class="app-pill-icon">💰</span>
+      <div class="app-pill-info">
+        <div class="app-pill-name">Exodus Wallet</div>
+        <div class="app-pill-cat">Finance</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- How it works -->
+<section id="howto">
+  <p class="section-label reveal">How it works</p>
+  <h2 class="section-title reveal">Simple as it gets.</h2>
+
+  <div class="steps">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <h3>Download FreshStart</h3>
+      <p>Grab the <code style="font-family:var(--font-mono);color:var(--accent)">setup_installer.py</code> and the <code style="font-family:var(--font-mono);color:var(--accent)">Launch_FreshStart.bat</code> from the releases page and put them in the same folder.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <h3>Run as Administrator</h3>
+      <p>Right-click <code style="font-family:var(--font-mono);color:var(--accent)">Launch_FreshStart.bat</code> → Run as administrator. If Python isn't installed yet, it'll open the download page for you.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <h3>Pick your apps</h3>
+      <p>Already-installed apps are detected and unchecked automatically. Check anything else you want and hit Download & Install.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">04</div>
+      <h3>Click through installers</h3>
+      <p>Each app's official installer opens one at a time. Close it when done and the next one opens automatically.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">05</div>
+      <h3>Keep or delete the files</h3>
+      <p>After all installs complete, choose to delete the downloaded EXEs or keep them in the <code style="font-family:var(--font-mono);color:var(--accent)">installers/</code> folder for later.</p>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- Requirements -->
+<section>
+  <p class="section-label reveal">Requirements</p>
+  <h2 class="section-title reveal">Almost nothing.</h2>
+
+  <div class="req-grid reveal">
+    <div class="req-item">
+      <div class="req-dot green"></div>
+      <div>
+        <h4>Windows 10 or 11</h4>
+        <p>Works on any 64-bit Windows 10/11 install. Fresh or existing.</p>
+      </div>
+    </div>
+    <div class="req-item">
+      <div class="req-dot blue"></div>
+      <div>
+        <h4>Python 3.8+</h4>
+        <p>The launcher checks for Python automatically and opens the download page if it's missing.</p>
+      </div>
+    </div>
+    <div class="req-item">
+      <div class="req-dot yellow"></div>
+      <div>
+        <h4>Run as Administrator</h4>
+        <p>Most installers require admin rights. Right-click → Run as administrator.</p>
+      </div>
+    </div>
+    <div class="req-item">
+      <div class="req-dot green"></div>
+      <div>
+        <h4>Internet connection</h4>
+        <p>Each installer is downloaded directly. No files are bundled — always gets the latest version.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-band reveal">
+  <h2>Ready for a clean slate?</h2>
+  <p>Download FreshStart, run it once, and your machine is set up<br>exactly the way you like it.</p>
+  <a href="https://github.com/YOUR_USERNAME/freshstart/releases/latest/download/setup_installer.py"
+     class="btn-primary" style="font-size:1rem; padding:16px 36px;">
+    ↓ &nbsp;Download FreshStart
+  </a>
+  <p class="cta-note">Free · Open source · No telemetry · No installer required</p>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="logo">Fresh<span>Start</span></div>
+  <p>Built with Python · <a href="https://github.com/YOUR_USERNAME/freshstart" target="_blank">GitHub</a></p>
+</footer>
+
+<script>
+  // Custom cursor
+  const cur = document.getElementById('cursor');
+  document.addEventListener('mousemove', e => {
+    cur.style.left = e.clientX + 'px';
+    cur.style.top  = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button, .app-pill, .feature-card').forEach(el => {
+    el.addEventListener('mouseenter', () => cur.classList.add('big'));
+    el.addEventListener('mouseleave', () => cur.classList.remove('big'));
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
